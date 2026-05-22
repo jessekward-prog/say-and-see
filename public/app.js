@@ -122,15 +122,12 @@
 
   recognition.onerror = (e) => {
     listening = false;
+    setStatus('SR error: ' + e.error, true);
     if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
       holding = false;
       micEl.classList.remove('holding');
       localStorage.removeItem('mic-connected');
       showOverlay('Microphone is blocked. Tap Connect to allow it again.', true);
-    } else if (e.error === 'no-speech' || e.error === 'aborted') {
-      // benign — keep button green while finger is still down; onend will decide whether to restart
-    } else {
-      setStatus('Error: ' + e.error, true);
     }
   };
 
