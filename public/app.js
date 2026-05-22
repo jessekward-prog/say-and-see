@@ -1,7 +1,7 @@
 (() => {
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   const wordEl = document.getElementById('word');
-  const sentenceEl = document.getElementById('sentence');
+  const emojiEl = document.getElementById('emoji');
   const variantsEl = document.getElementById('variants');
   const micEl = document.getElementById('mic');
   const statusEl = document.getElementById('status');
@@ -106,21 +106,37 @@
     const group = HOMOPHONES[word];
     if (group && group.length > 1) {
       renderVariants(word, group);
+      const me = group.find((v) => v.word.toLowerCase() === word);
+      announceWord(word, me && me.sentence);
     } else {
       clearVariants();
+      speak(word);
     }
     setStatus('Tap the word to hear it');
+  };
+
+  const announceWord = (word, sentence) => {
     speak(word);
+    if (sentence) queueSpeak(sentence);
+  };
+
+  const queueSpeak = (text) => {
+    if (!('speechSynthesis' in window)) return;
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = 'en-US';
+    u.rate = 0.85;
+    u.pitch = 1.05;
+    window.speechSynthesis.speak(u);
   };
 
   const renderVariants = (current, group) => {
     variantsEl.innerHTML = '';
     const me = group.find((v) => v.word.toLowerCase() === current);
-    if (me && me.sentence) {
-      sentenceEl.textContent = me.sentence;
-      sentenceEl.hidden = false;
+    if (me && me.emoji) {
+      emojiEl.textContent = me.emoji;
+      emojiEl.hidden = false;
     } else {
-      sentenceEl.hidden = true;
+      emojiEl.hidden = true;
     }
     let any = false;
     for (const v of group) {
@@ -129,23 +145,26 @@
       const li = document.createElement('li');
       li.className = 'variant';
       li.setAttribute('role', 'button');
+      li.setAttribute('aria-label', v.word);
       li.tabIndex = 0;
+
+      const em = document.createElement('span');
+      em.className = 'variant-emoji';
+      em.setAttribute('aria-hidden', 'true');
+      em.textContent = v.emoji || '✨';
 
       const w = document.createElement('span');
       w.className = 'variant-word';
       w.textContent = v.word;
 
-      const s = document.createElement('span');
-      s.className = 'variant-sentence';
-      s.textContent = v.sentence;
-
+      li.appendChild(em);
       li.appendChild(w);
-      li.appendChild(s);
       const activate = () => {
         const next = v.word.toLowerCase();
         wordEl.textContent = next;
         renderVariants(next, group);
-        speak(v.word);
+        // speak the word, then queue its example sentence so a pre-reader hears the meaning in context
+        announceWord(next, v.sentence);
       };
       li.addEventListener('click', activate);
       li.addEventListener('keydown', (ev) => {
@@ -159,7 +178,8 @@
   const clearVariants = () => {
     variantsEl.innerHTML = '';
     variantsEl.hidden = true;
-    sentenceEl.hidden = true;
+    emojiEl.hidden = true;
+    emojiEl.textContent = '';
   };
 
   const speak = (text) => {
@@ -257,7 +277,10 @@
 
   wordEl.addEventListener('click', () => {
     if (wordEl.classList.contains('placeholder')) return;
-    speak(wordEl.textContent);
+    const word = wordEl.textContent;
+    const group = HOMOPHONES[word.toLowerCase()];
+    const me = group && group.find((v) => v.word.toLowerCase() === word.toLowerCase());
+    announceWord(word, me && me.sentence);
   });
 
   if ('serviceWorker' in navigator) {
@@ -267,52 +290,54 @@
   }
 
   function buildHomophones() {
+    // [word, emoji, sentence] — emoji is the language-free meaning cue for pre-readers,
+    // sentence is what gets spoken aloud so they hear the context.
     const groups = [
-      [['there', 'The cat is over there.'], ['their', 'It is their cat.'], ["they're", "They're playing outside."]],
-      [['to', 'I go to school.'], ['too', 'I want one too.'], ['two', 'I have two cats.']],
-      [['your', 'Is that your bag?'], ["you're", "You're so kind."]],
-      [['here', 'Come here, please.'], ['hear', 'I can hear the music.']],
-      [['right', 'Turn right at the corner.'], ['write', 'Write your name on the page.']],
-      [['bare', 'My feet are bare.'], ['bear', 'The bear walked through the woods.']],
-      [['be', 'I want to be a doctor.'], ['bee', 'A bee landed on the flower.']],
-      [['blew', 'The wind blew the leaves.'], ['blue', 'The sky is blue.']],
-      [['by', 'Sit by the window.'], ['buy', 'I want to buy a toy.'], ['bye', 'Wave bye to grandma.']],
-      [['cent', 'A penny is one cent.'], ['sent', 'I sent her a letter.'], ['scent', 'I love the scent of flowers.']],
-      [['dear', 'Hello, my dear friend.'], ['deer', 'A deer ran across the road.']],
-      [['fair', 'That is not fair.'], ['fare', 'The bus fare is two dollars.']],
-      [['flour', 'We need flour to bake bread.'], ['flower', 'A pretty flower in the garden.']],
-      [['for', 'This gift is for you.'], ['four', 'I have four apples.']],
-      [['hair', 'Brush your hair before school.'], ['hare', 'A hare hops very fast.']],
-      [['heal', 'The cut will heal soon.'], ['heel', 'I hurt my heel running.']],
-      [['hour', 'Bed time in one hour.'], ['our', 'This is our house.']],
-      [['knew', 'I knew the answer.'], ['new', 'I have new shoes.']],
-      [['knight', 'The knight had a shiny sword.'], ['night', 'It is dark at night.']],
-      [['know', 'I know the song.'], ['no', 'No, thank you.']],
-      [['mail', 'The mail is in the box.'], ['male', 'A male lion has a mane.']],
-      [['meet', 'Let us meet at the park.'], ['meat', 'I eat meat for dinner.']],
-      [['one', 'I have one cat.'], ['won', 'She won the race.']],
-      [['pair', 'I bought a pair of socks.'], ['pear', 'A pear is a sweet fruit.']],
-      [['peace', 'Please give me some peace.'], ['piece', 'May I have a piece of cake?']],
-      [['plain', 'The shirt is plain white.'], ['plane', 'A plane flies high in the sky.']],
-      [['rain', 'It will rain today.'], ['reign', 'The queen began her reign.']],
-      [['read', 'I love to read books.'], ['red', 'The apple is red.']],
-      [['road', 'Be careful by the road.'], ['rode', 'I rode my bike to school.']],
-      [['sea', 'Fish swim in the sea.'], ['see', 'I can see the moon.']],
-      [['son', 'She has one son.'], ['sun', 'The sun is bright and hot.']],
-      [['tail', 'The dog wagged its tail.'], ['tale', 'Tell me a bedtime tale.']],
-      [['threw', 'He threw the ball.'], ['through', 'I walked through the door.']],
-      [['wait', 'Please wait for me.'], ['weight', 'The weight of the box is heavy.']],
-      [['way', 'Which way is the park?'], ['weigh', 'I will weigh the apples.']],
-      [['weak', 'I feel weak today.'], ['week', 'A week has seven days.']],
-      [['which', 'Which one is yours?'], ['witch', 'The witch wore a black hat.']],
-      [['wood', 'The chair is made of wood.'], ['would', 'I would like cake, please.']],
-      [['ate', 'I ate my breakfast.'], ['eight', 'There are eight days left.']],
-      [['hi', 'Hi, how are you?'], ['high', 'The kite flew very high.']],
-      [['toe', 'I stubbed my toe.'], ['tow', 'The truck will tow the car.']]
+      [['there', '👉', 'The cat is over there.'], ['their', '🏠', 'It is their cat.'], ["they're", '🏃', "They're playing outside."]],
+      [['to', '🎯', 'I go to school.'], ['too', '➕', 'I want one too.'], ['two', '✌️', 'I have two cats.']],
+      [['your', '👜', 'Is that your bag?'], ["you're", '🫵', "You're so kind."]],
+      [['here', '📍', 'Come here, please.'], ['hear', '👂', 'I can hear the music.']],
+      [['right', '➡️', 'Turn right at the corner.'], ['write', '✏️', 'Write your name on the page.']],
+      [['bare', '🦶', 'My feet are bare.'], ['bear', '🐻', 'The bear walked through the woods.']],
+      [['be', '😊', 'I want to be happy.'], ['bee', '🐝', 'A bee landed on the flower.']],
+      [['blew', '💨', 'The wind blew the leaves.'], ['blue', '🔵', 'The sky is blue.']],
+      [['by', '🪟', 'Sit by the window.'], ['buy', '🛒', 'I want to buy a toy.'], ['bye', '👋', 'Wave bye to grandma.']],
+      [['cent', '🪙', 'A penny is one cent.'], ['sent', '📮', 'I sent her a letter.'], ['scent', '🌹', 'I love the scent of flowers.']],
+      [['dear', '💝', 'Hello, my dear friend.'], ['deer', '🦌', 'A deer ran across the road.']],
+      [['fair', '🎡', 'We went to the fair.'], ['fare', '🚌', 'The bus fare is two dollars.']],
+      [['flour', '🌾', 'We need flour to bake bread.'], ['flower', '🌸', 'A pretty flower in the garden.']],
+      [['for', '🎁', 'This gift is for you.'], ['four', '4️⃣', 'I have four apples.']],
+      [['hair', '💇', 'Brush your hair before school.'], ['hare', '🐇', 'A hare hops very fast.']],
+      [['heal', '❤️‍🩹', 'The cut will heal soon.'], ['heel', '👟', 'I hurt my heel running.']],
+      [['hour', '⏰', 'Bed time in one hour.'], ['our', '🏡', 'This is our house.']],
+      [['knew', '💡', 'I knew the answer.'], ['new', '✨', 'I have new shoes.']],
+      [['knight', '🛡️', 'The knight had a shiny sword.'], ['night', '🌙', 'It is dark at night.']],
+      [['know', '🧠', 'I know the song.'], ['no', '❌', 'No, thank you.']],
+      [['mail', '📬', 'The mail is in the box.'], ['male', '♂️', 'A male lion has a mane.']],
+      [['meet', '🤝', 'Let us meet at the park.'], ['meat', '🥩', 'I eat meat for dinner.']],
+      [['one', '1️⃣', 'I have one cat.'], ['won', '🏆', 'She won the race.']],
+      [['pair', '🧦', 'I bought a pair of socks.'], ['pear', '🍐', 'A pear is a sweet fruit.']],
+      [['peace', '☮️', 'Please give me some peace.'], ['piece', '🍰', 'May I have a piece of cake?']],
+      [['plain', '⬜', 'The shirt is plain white.'], ['plane', '✈️', 'A plane flies high in the sky.']],
+      [['rain', '🌧️', 'It will rain today.'], ['reign', '👑', 'The queen began her reign.']],
+      [['read', '📖', 'I love to read books.'], ['red', '🔴', 'The apple is red.']],
+      [['road', '🛣️', 'Be careful by the road.'], ['rode', '🚲', 'I rode my bike to school.']],
+      [['sea', '🌊', 'Fish swim in the sea.'], ['see', '👀', 'I can see the moon.']],
+      [['son', '👦', 'She has one son.'], ['sun', '☀️', 'The sun is bright and hot.']],
+      [['tail', '🐕', 'The dog wagged its tail.'], ['tale', '📚', 'Tell me a bedtime tale.']],
+      [['threw', '🤾', 'He threw the ball.'], ['through', '🚪', 'I walked through the door.']],
+      [['wait', '⏳', 'Please wait for me.'], ['weight', '🏋️', 'The weight of the box is heavy.']],
+      [['way', '🗺️', 'Which way is the park?'], ['weigh', '⚖️', 'I will weigh the apples.']],
+      [['weak', '😩', 'I feel weak today.'], ['week', '📅', 'A week has seven days.']],
+      [['which', '❓', 'Which one is yours?'], ['witch', '🧙‍♀️', 'The witch wore a black hat.']],
+      [['wood', '🪵', 'The chair is made of wood.'], ['would', '💭', 'I would like cake, please.']],
+      [['ate', '🍽️', 'I ate my breakfast.'], ['eight', '8️⃣', 'There are eight cookies on the plate.']],
+      [['hi', '🙋', 'Hi, how are you?'], ['high', '⬆️', 'The kite flew very high.']],
+      [['toe', '👣', 'I stubbed my toe.'], ['tow', '🚛', 'The truck will tow the car.']]
     ];
     const dict = {};
     for (const group of groups) {
-      const entries = group.map(([word, sentence]) => ({ word, sentence }));
+      const entries = group.map(([word, emoji, sentence]) => ({ word, emoji, sentence }));
       for (const entry of entries) {
         dict[entry.word.toLowerCase()] = entries;
       }
