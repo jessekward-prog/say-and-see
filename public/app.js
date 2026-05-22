@@ -122,14 +122,13 @@
 
   recognition.onerror = (e) => {
     listening = false;
-    micEl.classList.remove('holding');
     if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
+      holding = false;
+      micEl.classList.remove('holding');
       localStorage.removeItem('mic-connected');
       showOverlay('Microphone is blocked. Tap Connect to allow it again.', true);
-    } else if (e.error === 'no-speech') {
-      setStatus('Didn’t catch that. Try again.');
-    } else if (e.error === 'aborted') {
-      setStatus('');
+    } else if (e.error === 'no-speech' || e.error === 'aborted') {
+      // benign — keep button green while finger is still down; onend will decide whether to restart
     } else {
       setStatus('Error: ' + e.error, true);
     }
@@ -137,7 +136,12 @@
 
   recognition.onend = () => {
     listening = false;
-    micEl.classList.remove('holding');
+    if (holding) {
+      // user is still pressing — restart so a long hold keeps listening across SR's auto-end
+      try { recognition.start(); } catch (_) {}
+    } else {
+      micEl.classList.remove('holding');
+    }
   };
 
   const startListening = () => {
