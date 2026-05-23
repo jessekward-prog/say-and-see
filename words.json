@@ -1,0 +1,13 @@
+{
+  "animals": ["cat", "dog", "bird", "fish", "cow", "pig", "horse", "sheep", "duck", "hen", "frog", "bee", "ant", "snail", "bear", "lion", "tiger", "elephant", "monkey", "rabbit", "mouse", "owl", "fox", "wolf", "snake", "spider", "shark", "whale", "dolphin", "turtle", "crab", "hare"],
+  "family": ["mom", "dad", "baby", "brother", "sister", "grandma", "grandpa", "uncle", "aunt", "cousin", "friend", "boy", "girl", "kid", "son"],
+  "food": ["apple", "banana", "bread", "milk", "juice", "cake", "pizza", "cookie", "egg", "cheese", "carrot", "rice", "pasta", "soup", "candy", "ice", "water", "tea", "honey", "jam", "butter", "salt", "pear", "meat"],
+  "numbers_colors": ["one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "red", "blue", "green", "yellow", "pink", "purple", "orange", "black", "white", "brown"],
+  "body": ["head", "hair", "eye", "ear", "nose", "mouth", "tooth", "tongue", "hand", "arm", "leg", "foot", "toe", "knee", "heart", "skin"],
+  "toys_play": ["ball", "doll", "book", "toy", "game", "block", "kite", "bike", "swing", "slide", "puzzle", "drum", "song", "dance", "play"],
+  "house": ["house", "home", "door", "window", "bed", "chair", "table", "lamp", "clock", "key", "cup", "plate", "fork", "spoon", "bowl", "soap", "towel", "bath", "sink", "floor"],
+  "nature_weather": ["sun", "moon", "star", "sky", "cloud", "rain", "snow", "wind", "tree", "flower", "leaf", "grass", "rock", "sand", "sea", "river", "fire", "ice", "night", "day"],
+  "verbs": ["run", "jump", "walk", "sit", "stand", "eat", "drink", "sleep", "read", "write", "draw", "sing", "dance", "play", "look", "see", "hear", "talk", "smile", "laugh", "cry", "love", "hug", "kiss", "help", "find", "give", "take", "go", "come", "stop", "wait"],
+  "adjectives": ["big", "small", "hot", "cold", "fast", "slow", "happy", "sad", "good", "bad", "loud", "soft", "hard", "wet", "dry", "new", "old", "high", "low", "long", "short"],
+  "homophones": ["there", "their", "they're", "to", "too", "two", "your", "you're", "here", "hear", "right", "write", "bare", "be", "bee", "blew", "blue", "by", "buy", "bye", "cent", "sent", "scent", "dear", "deer", "fair", "fare", "flour", "flower", "for", "four", "knew", "new", "knight", "night", "know", "no", "mail", "male", "meet", "weight", "way", "weigh", "weak", "week", "which", "witch", "wood", "would", "ate", "hi", "high", "tow"]
+}
