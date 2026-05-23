@@ -11,7 +11,10 @@ import { fileURLToPath } from 'node:url';
 import { coachWord, initDb } from './coach.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const CONCURRENCY = 5;
+// Org-level Haiku 4.5 rate limit is 50 RPM. At Haiku's ~1.5s per uncached call,
+// concurrency 1 = ~40 RPM, comfortably under the limit. Bumping higher trips
+// 429s within ~10 calls.
+const CONCURRENCY = 1;
 
 async function main() {
   await initDb();
