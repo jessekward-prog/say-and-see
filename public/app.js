@@ -92,11 +92,11 @@
     }
   })();
 
-  const recognition = new SR();
-  recognition.lang = 'en-US';
-  recognition.continuous = false;
-  recognition.interimResults = false;
-  recognition.maxAlternatives = 1;
+  // `recognition` is recreated on demand because Chromium on Android wedges its
+  // SpeechRecognition instance after a handful of uses — start() starts throwing
+  // silently and the only fix is a fresh object. Treating it as disposable
+  // sidesteps that.
+  let recognition = null;
 
   let holding = false;
   let listening = false;
@@ -276,52 +276,75 @@
     window.speechSynthesis.speak(u);
   };
 
-  recognition.onstart = () => {
-    listening = true;
-    setStatus('Listening…');
-  };
+  const createRecognition = () => {
+    const sr = new SR();
+    sr.lang = 'en-US';
+    sr.continuous = false;
+    sr.interimResults = false;
+    sr.maxAlternatives = 1;
 
-  recognition.onresult = (e) => {
-    gotResultThisSession = true;
-    const result = e.results[0];
-    if (result && result[0]) showWord(result[0].transcript);
-  };
+    sr.onstart = () => {
+      listening = true;
+      setStatus('Listening…');
+    };
 
-  recognition.onerror = (e) => {
-    listening = false;
-    if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
-      holding = false;
-      micEl.classList.remove('holding');
-      localStorage.removeItem('mic-connected');
-      showOverlay('Microphone is blocked. Tap Connect to allow it again.', true);
-    } else if (e.error !== 'no-speech' && e.error !== 'aborted') {
-      setStatus('SR error: ' + e.error, true);
-    }
-  };
+    sr.onresult = (e) => {
+      gotResultThisSession = true;
+      const result = e.results[0];
+      if (result && result[0]) showWord(result[0].transcript);
+    };
 
-  recognition.onend = () => {
-    listening = false;
-    // Restart only if user is STILL holding AND we haven't already produced a result this session.
-    // Without this guard, a successful result + still-pressed finger would race the user's release
-    // and leave the recognizer in a half-restarted state — breaking the next press.
-    if (holding && !gotResultThisSession) {
-      try { recognition.start(); } catch (_) {}
-    } else {
-      micEl.classList.remove('holding');
-    }
+    sr.onerror = (e) => {
+      listening = false;
+      if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
+        holding = false;
+        micEl.classList.remove('holding');
+        localStorage.removeItem('mic-connected');
+        showOverlay('Microphone is blocked. Tap Connect to allow it again.', true);
+        recognition = null;
+      } else if (e.error !== 'no-speech' && e.error !== 'aborted') {
+        // network / audio-capture / etc. — the instance is likely wedged. Dispose it.
+        setStatus('SR error: ' + e.error, true);
+        recognition = null;
+      }
+    };
+
+    sr.onend = () => {
+      listening = false;
+      if (holding && !gotResultThisSession) {
+        // Still holding, no result yet — try to keep listening across SR's auto-end.
+        try { sr.start(); } catch (_) { recognition = null; }
+      } else {
+        micEl.classList.remove('holding');
+      }
+    };
+
+    return sr;
   };
 
   const startListening = () => {
     if (listening) return;
     if ('speechSynthesis' in window) window.speechSynthesis.cancel();
     gotResultThisSession = false;
+    if (!recognition) recognition = createRecognition();
     try {
       recognition.start();
-    } catch (_) { /* already started */ }
+    } catch (_) {
+      // Wedged. Throw it away and try one more time with a fresh instance.
+      recognition = createRecognition();
+      try {
+        recognition.start();
+      } catch (__) {
+        listening = false;
+        holding = false;
+        micEl.classList.remove('holding');
+        setStatus('Tap the mic to try again', true);
+      }
+    }
   };
 
   const stopListening = () => {
-    if (!listening) return;
+    if (!recognition) return;
     try { recognition.stop(); } catch (_) {}
   };
 
