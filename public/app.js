@@ -113,7 +113,44 @@
       speak(word);
     }
     setStatus('Tap the word to hear it');
+    fetchCoach(word);
   };
+
+  let coachAbort = null;
+  const coachCache = new Map();
+
+  async function fetchCoach(word) {
+    // Cancel any earlier in-flight coach so the spoken sequence stays in sync with the displayed word
+    if (coachAbort) coachAbort.abort();
+    coachAbort = new AbortController();
+    const myWord = word;
+
+    const cached = coachCache.get(word);
+    if (cached) { playCoach(myWord, cached); return; }
+
+    try {
+      const r = await fetch('/api/word', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ word }),
+        signal: coachAbort.signal,
+      });
+      if (!r.ok) return;
+      const data = await r.json();
+      coachCache.set(word, data);
+      if (wordEl.textContent.toLowerCase() !== myWord.toLowerCase()) return; // user moved on
+      playCoach(myWord, data);
+    } catch (err) {
+      if (err.name !== 'AbortError') console.warn('coach fetch failed', err);
+    }
+  }
+
+  function playCoach(word, data) {
+    // Sequence after the initial word/sentence finishes: spelled-out letters, then sentence again with context.
+    // Don't cancel — let what's already playing finish, then queue ours.
+    if (data.spelling) queueSpeak(data.spelling);
+    if (data.sentence) queueSpeak(data.sentence);
+  }
 
   const announceWord = (word, sentence) => {
     speak(word);

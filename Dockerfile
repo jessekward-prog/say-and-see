@@ -1,9 +1,18 @@
-FROM nginx:1.27-alpine
+FROM node:22-alpine
 
-COPY nginx.conf /etc/nginx/conf.d/default.conf
-COPY public/ /usr/share/nginx/html/
+WORKDIR /app
 
-EXPOSE 80
+COPY package.json ./
+RUN npm install --omit=dev
 
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s \
-  CMD wget -qO- http://127.0.0.1/ >/dev/null || exit 1
+COPY server.js ./
+COPY public/ ./public/
+
+ENV NODE_ENV=production
+ENV PORT=3000
+EXPOSE 3000
+
+HEALTHCHECK --interval=30s --timeout=3s --start-period=10s \
+  CMD wget -qO- http://127.0.0.1:3000/healthz >/dev/null || exit 1
+
+CMD ["node", "server.js"]
