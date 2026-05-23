@@ -1,4 +1,19 @@
 (() => {
+  // ── theme picker ─────────────────────────────────────────────
+  const THEMES = ['unicorn', 'garden', 'underwater'];
+  const applyTheme = (name) => {
+    const theme = THEMES.includes(name) ? name : 'unicorn';
+    document.documentElement.dataset.theme = theme;
+    try { localStorage.setItem('theme', theme); } catch (_) {}
+    document.querySelectorAll('.theme-swatch').forEach((b) => {
+      b.setAttribute('aria-pressed', b.dataset.theme === theme ? 'true' : 'false');
+    });
+  };
+  document.querySelectorAll('.theme-swatch').forEach((b) => {
+    b.addEventListener('click', () => applyTheme(b.dataset.theme));
+  });
+  applyTheme((() => { try { return localStorage.getItem('theme'); } catch (_) { return null; } })());
+
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   const wordEl = document.getElementById('word');
   const emojiEl = document.getElementById('emoji');

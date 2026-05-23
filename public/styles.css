@@ -1,11 +1,33 @@
-:root {
-  --bg-1: #fff4e0;
-  --bg-2: #ffd99a;
-  --accent: #ff8c42;
-  --accent-deep: #e35b1c;
-  --ink: #2a1810;
-  --listening: #4caf50;
+/* Default theme: unicorn pastel. JS may set [data-theme] on <html> to switch. */
+:root,
+[data-theme="unicorn"] {
+  --bg-1: #ffe4f0;
+  --bg-2: #e8d4ff;
+  --accent: #ff5fa3;
+  --accent-deep: #c1185f;
+  --ink: #5b3f96;
+  --listening: #50e3ff;
+  --listening-deep: #1e9bbe;
+}
+
+[data-theme="garden"] {
+  --bg-1: #f0fbe8;
+  --bg-2: #ffe8f0;
+  --accent: #d63384;
+  --accent-deep: #a02466;
+  --ink: #2d5a3d;
+  --listening: #66bb6a;
   --listening-deep: #2e7d32;
+}
+
+[data-theme="underwater"] {
+  --bg-1: #d6f5f0;
+  --bg-2: #b8e0f5;
+  --accent: #ff7a59;
+  --accent-deep: #d8553e;
+  --ink: #134e5e;
+  --listening: #4dd0a0;
+  --listening-deep: #1e8765;
 }
 
 * { box-sizing: border-box; }
@@ -76,8 +98,8 @@ main {
   gap: 4px;
   padding: 0.8em 1em;
   min-width: 6em;
-  background: rgba(255, 184, 122, 0.25);
-  border: 2px solid rgba(227, 91, 28, 0.35);
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  border: 2px solid color-mix(in srgb, var(--accent-deep) 35%, transparent);
   border-radius: 20px;
   cursor: pointer;
   transition: transform 0.08s ease, background 0.15s ease;
@@ -85,7 +107,7 @@ main {
 
 .variant:active {
   transform: scale(0.95);
-  background: rgba(255, 184, 122, 0.5);
+  background: color-mix(in srgb, var(--accent) 35%, transparent);
 }
 
 .variant-emoji {
@@ -115,7 +137,7 @@ main {
 
 .word:active {
   transform: scale(0.97);
-  background: rgba(255, 140, 66, 0.15);
+  background: color-mix(in srgb, var(--accent) 15%, transparent);
 }
 
 .word.placeholder {
@@ -139,10 +161,13 @@ main {
   height: clamp(140px, 38vw, 220px);
   border-radius: 50%;
   border: none;
-  background: radial-gradient(circle at 35% 30%, #ffb87a, var(--accent) 65%, var(--accent-deep));
+  background: radial-gradient(circle at 35% 30%,
+    color-mix(in srgb, var(--accent) 60%, white),
+    var(--accent) 65%,
+    var(--accent-deep));
   box-shadow:
     0 12px 0 var(--accent-deep),
-    0 18px 30px rgba(227, 91, 28, 0.4);
+    0 18px 30px color-mix(in srgb, var(--accent-deep) 40%, transparent);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -161,15 +186,18 @@ main {
 .mic.holding {
   transform: translateY(8px);
   box-shadow:
-    0 4px 0 var(--accent-deep),
-    0 6px 15px rgba(227, 91, 28, 0.3);
-  background: radial-gradient(circle at 35% 30%, #8fdc92, var(--listening) 65%, var(--listening-deep));
+    0 4px 0 var(--listening-deep),
+    0 6px 15px color-mix(in srgb, var(--listening-deep) 30%, transparent);
+  background: radial-gradient(circle at 35% 30%,
+    color-mix(in srgb, var(--listening) 50%, white),
+    var(--listening) 65%,
+    var(--listening-deep));
   animation: pulse 1.2s ease-in-out infinite;
 }
 
 @keyframes pulse {
-  0%, 100% { box-shadow: 0 4px 0 var(--listening-deep), 0 0 0 0 rgba(76, 175, 80, 0.5); }
-  50%      { box-shadow: 0 4px 0 var(--listening-deep), 0 0 0 24px rgba(76, 175, 80, 0); }
+  0%, 100% { box-shadow: 0 4px 0 var(--listening-deep), 0 0 0 0 color-mix(in srgb, var(--listening) 50%, transparent); }
+  50%      { box-shadow: 0 4px 0 var(--listening-deep), 0 0 0 24px color-mix(in srgb, var(--listening) 0%, transparent); }
 }
 
 .status {
@@ -230,20 +258,23 @@ main {
   padding: 1em 1.8em;
   border: none;
   border-radius: 999px;
-  background: linear-gradient(180deg, #ffb87a, var(--accent) 70%, var(--accent-deep));
+  background: linear-gradient(180deg,
+    color-mix(in srgb, var(--accent) 65%, white),
+    var(--accent) 70%,
+    var(--accent-deep));
   color: white;
   font-family: inherit;
   font-size: clamp(1.1rem, 4vw, 1.4rem);
   font-weight: 800;
   letter-spacing: 0.01em;
   cursor: pointer;
-  box-shadow: 0 8px 0 var(--accent-deep), 0 12px 20px rgba(227, 91, 28, 0.35);
+  box-shadow: 0 8px 0 var(--accent-deep), 0 12px 20px color-mix(in srgb, var(--accent-deep) 35%, transparent);
   transition: transform 0.08s ease, box-shadow 0.08s ease;
 }
 
 .connect:active {
   transform: translateY(4px);
-  box-shadow: 0 4px 0 var(--accent-deep), 0 6px 12px rgba(227, 91, 28, 0.3);
+  box-shadow: 0 4px 0 var(--accent-deep), 0 6px 12px color-mix(in srgb, var(--accent-deep) 30%, transparent);
 }
 
 .connect svg {
@@ -264,6 +295,38 @@ main {
   color: #c0392b;
   opacity: 1;
 }
+
+.theme-picker {
+  position: fixed;
+  top: max(env(safe-area-inset-top, 0px), 12px);
+  right: max(env(safe-area-inset-right, 0px), 12px);
+  display: flex;
+  gap: 8px;
+  z-index: 20;
+}
+
+.theme-swatch {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 3px solid white;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0, 0, 0, 0.05);
+  cursor: pointer;
+  padding: 0;
+  transition: transform 0.1s ease, box-shadow 0.15s ease;
+}
+
+.theme-swatch:active { transform: scale(0.9); }
+
+.theme-swatch[aria-pressed="true"] {
+  transform: scale(1.15);
+  border-width: 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25), 0 0 0 2px rgba(255, 255, 255, 0.7);
+}
+
+.theme-swatch.theme-unicorn   { background: linear-gradient(135deg, #ffe4f0, #e8d4ff); }
+.theme-swatch.theme-garden    { background: linear-gradient(135deg, #f0fbe8, #ffe8f0); }
+.theme-swatch.theme-underwater{ background: linear-gradient(135deg, #d6f5f0, #b8e0f5); }
 
 @media (prefers-reduced-motion: reduce) {
   .mic.holding { animation: none; }
