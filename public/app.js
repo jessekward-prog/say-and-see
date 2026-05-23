@@ -98,11 +98,39 @@
     return first.replace(/[.,!?;:"]/g, '').toLowerCase();
   };
 
+  // Scale the big word's font-size down so it always fits on one line, regardless
+  // of word length or viewport. CSS clamp() handles viewport, but can't see word length;
+  // this measures the rendered width after layout and shrinks to fit.
+  const fitWord = () => {
+    if (wordEl.classList.contains('placeholder')) return;
+    wordEl.style.fontSize = '';
+    const main = wordEl.parentElement.parentElement;
+    const mainStyles = getComputedStyle(main);
+    const maxW = main.clientWidth
+      - parseFloat(mainStyles.paddingLeft)
+      - parseFloat(mainStyles.paddingRight)
+      - 16;
+    if (wordEl.scrollWidth <= maxW) return;
+    const currentSize = parseFloat(getComputedStyle(wordEl).fontSize);
+    const ratio = maxW / wordEl.scrollWidth;
+    const newSize = Math.max(32, Math.floor(currentSize * ratio * 0.97));
+    wordEl.style.fontSize = newSize + 'px';
+  };
+
+  let fitWordRaf = 0;
+  const queueFitWord = () => {
+    if (fitWordRaf) return;
+    fitWordRaf = requestAnimationFrame(() => { fitWordRaf = 0; fitWord(); });
+  };
+  window.addEventListener('resize', queueFitWord);
+  window.addEventListener('orientationchange', queueFitWord);
+
   const showWord = (raw) => {
     const word = normalize(raw);
     if (!word) return;
     wordEl.textContent = word;
     wordEl.classList.remove('placeholder');
+    queueFitWord();
     const group = HOMOPHONES[word];
     if (group && group.length > 1) {
       renderVariants(word, group);
@@ -199,6 +227,7 @@
       const activate = () => {
         const next = v.word.toLowerCase();
         wordEl.textContent = next;
+        queueFitWord();
         renderVariants(next, group);
         // speak the word, then queue its example sentence so a pre-reader hears the meaning in context
         announceWord(next, v.sentence);

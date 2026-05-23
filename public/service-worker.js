@@ -1,4 +1,4 @@
-const CACHE = 'say-and-see-v7';
+const CACHE = 'say-and-see-v8';
 const ASSETS = [
   '/',
   '/index.html',
