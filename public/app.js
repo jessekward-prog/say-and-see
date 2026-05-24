@@ -96,6 +96,11 @@
   let holding = false;
   let listening = false;
   let gotResultThisSession = false;
+  // Auto-restart in onend (to keep listening across natural pauses while holding)
+  // is capped at ONE per press. Without this cap, a device where SR can't actually
+  // hear the kid loops "Listening…" indefinitely and silently overwrites the
+  // 'didn't hear anything' status from no-speech errors.
+  let restartedThisSession = false;
 
   const setStatus = (msg, isError = false) => {
     statusEl.textContent = msg || '';
@@ -206,14 +211,19 @@
 
     sr.onend = () => {
       listening = false;
-      if (holding && !gotResultThisSession) {
+      // One auto-restart per press: lets natural pauses survive but doesn't
+      // loop forever on a device where SR can't actually capture audio.
+      if (holding && !gotResultThisSession && !restartedThisSession) {
+        restartedThisSession = true;
         try { sr.start(); } catch (_) { recognition = null; }
         return;
       }
+      // Give up — clear the visual hold even if the finger is still down,
+      // so the kid sees the failure mode and isn't stuck on "Listening…".
+      holding = false;
       micEl.classList.remove('holding');
-      // If session ended with no result and no other status set, give the kid a hint.
-      if (!gotResultThisSession && statusEl.textContent === 'Listening…') {
-        setStatus('Didn’t hear anything — hold the button while you speak');
+      if (!gotResultThisSession) {
+        setStatus('Didn’t hear that — try again, louder');
       }
     };
 
@@ -224,6 +234,7 @@
     if (listening) return;
     if ('speechSynthesis' in window) window.speechSynthesis.cancel();
     gotResultThisSession = false;
+    restartedThisSession = false;
     if (!recognition) recognition = createRecognition();
     try {
       recognition.start();
