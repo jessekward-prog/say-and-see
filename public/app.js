@@ -194,7 +194,11 @@
         localStorage.removeItem('mic-connected');
         showOverlay('Microphone is blocked. Tap Connect to allow it again.', true);
         recognition = null;
-      } else if (e.error !== 'no-speech' && e.error !== 'aborted') {
+      } else if (e.error === 'no-speech') {
+        setStatus('Didn’t hear anything — hold the button while you speak');
+      } else if (e.error === 'aborted') {
+        // benign — usually user released early
+      } else {
         setStatus('SR error: ' + e.error, true);
         recognition = null;
       }
@@ -204,8 +208,12 @@
       listening = false;
       if (holding && !gotResultThisSession) {
         try { sr.start(); } catch (_) { recognition = null; }
-      } else {
-        micEl.classList.remove('holding');
+        return;
+      }
+      micEl.classList.remove('holding');
+      // If session ended with no result and no other status set, give the kid a hint.
+      if (!gotResultThisSession && statusEl.textContent === 'Listening…') {
+        setStatus('Didn’t hear anything — hold the button while you speak');
       }
     };
 
