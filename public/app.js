@@ -387,6 +387,27 @@
     announceWord(word, me && me.sentence);
   });
 
+  // ── reset button ─────────────────────────────────────────────
+  // Manual escape hatch when SR keeps mis-hearing or the visual gets stuck.
+  // Same gesture for both "broken" and "wrong word, start over".
+  document.getElementById('reset').addEventListener('click', () => {
+    if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+    if (recognition) {
+      try { recognition.abort(); } catch (_) {}
+      recognition = null;
+    }
+    if (coachAbort) { try { coachAbort.abort(); } catch (_) {} coachAbort = null; }
+    holding = false;
+    listening = false;
+    gotResultThisSession = false;
+    micEl.classList.remove('holding');
+    wordEl.textContent = 'Hold the button and say a word';
+    wordEl.classList.add('placeholder');
+    wordEl.style.fontSize = '';
+    clearVariants();
+    setStatus('');
+  });
+
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
       navigator.serviceWorker.register('/service-worker.js').catch(() => {});
