@@ -107,35 +107,52 @@
     statusEl.classList.toggle('error', isError);
   };
 
-  // ── TTS ──────────────────────────────────────────────────────
-  const speak = (text, onEnd) => {
-    if (!('speechSynthesis' in window)) return;
-    window.speechSynthesis.cancel();
-    const u = new SpeechSynthesisUtterance(text);
-    u.lang = 'en-US';
-    u.rate = 0.85;
-    u.pitch = 1.05;
-    if (onEnd) { u.onend = onEnd; u.onerror = onEnd; }
-    window.speechSynthesis.speak(u);
+  // ── TTS (piper via /api/speak) ────────────────────────────────
+  const audioQueue = [];
+  let currentAudio = null;
+
+  const cancelAudio = () => {
+    if (currentAudio) {
+      currentAudio.pause();
+      URL.revokeObjectURL(currentAudio.src);
+      currentAudio = null;
+    }
+    for (const { url } of audioQueue.splice(0)) URL.revokeObjectURL(url);
   };
 
-  // queueSpeak: append to TTS queue (doesn't cancel what's playing). Slower rate
-  // so spelled-out letters land clearly.
-  const queueSpeak = (text, { rate = 0.85, onEnd } = {}) => {
-    if (!('speechSynthesis' in window)) return;
-    const u = new SpeechSynthesisUtterance(text);
-    u.lang = 'en-US';
-    u.rate = rate;
-    u.pitch = 1.05;
-    if (onEnd) { u.onend = onEnd; u.onerror = onEnd; }
-    window.speechSynthesis.speak(u);
+  const playNext = () => {
+    if (!audioQueue.length) { currentAudio = null; return; }
+    const { url, onEnd } = audioQueue.shift();
+    const audio = new Audio(url);
+    currentAudio = audio;
+    const finish = () => { URL.revokeObjectURL(url); currentAudio = null; if (onEnd) onEnd(); playNext(); };
+    audio.onended = finish;
+    audio.onerror = finish;
+    audio.play().catch(() => {});
+  };
+
+  const fetchAudio = async (text) => {
+    const resp = await fetch('/api/speak', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text }),
+    });
+    if (!resp.ok) throw new Error('tts_error');
+    return URL.createObjectURL(await resp.blob());
+  };
+
+  const speak = async (text, onEnd) => {
+    cancelAudio();
+    try {
+      audioQueue.push({ url: await fetchAudio(text), onEnd });
+      playNext();
+    } catch (_) { if (onEnd) onEnd(); }
   };
 
   // ── sentence + chips ─────────────────────────────────────────
   const spellOf = (word) => {
-    // "cat" -> "C... A... T." — ASCII dots + space give TTS a clean pause per letter
     const letters = word.toUpperCase().replace(/[^A-Z]/g, '').split('');
-    return letters.length ? letters.join('... ') + '.' : '';
+    return letters.join(', ');
   };
 
   const showSentence = (raw) => {
@@ -167,12 +184,18 @@
     speak(display);
   };
 
-  const speakChip = (chip, word) => {
+  const speakChip = async (chip, word) => {
     document.querySelectorAll('.chip.speaking').forEach((c) => c.classList.remove('speaking'));
     chip.classList.add('speaking');
-    // Speak the word, then queue the spelling. onEnd of the spelling clears the highlight.
-    speak(word);
-    queueSpeak(spellOf(word), { rate: 0.7, onEnd: () => chip.classList.remove('speaking') });
+    cancelAudio();
+    try {
+      const [wordUrl, spellUrl] = await Promise.all([fetchAudio(word), fetchAudio(spellOf(word))]);
+      audioQueue.push({ url: wordUrl });
+      audioQueue.push({ url: spellUrl, onEnd: () => chip.classList.remove('speaking') });
+      playNext();
+    } catch (_) {
+      chip.classList.remove('speaking');
+    }
   };
 
   // ── SpeechRecognition (disposable; recreated on wedge — see project memory) ──
@@ -232,7 +255,7 @@
 
   const startListening = () => {
     if (listening) return;
-    if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+    cancelAudio();
     gotResultThisSession = false;
     restartedThisSession = false;
     if (!recognition) recognition = createRecognition();
@@ -288,7 +311,7 @@
 
   // ── reset button ─────────────────────────────────────────────
   document.getElementById('reset').addEventListener('click', () => {
-    if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+    cancelAudio();
     if (recognition) {
       try { recognition.abort(); } catch (_) {}
       recognition = null;

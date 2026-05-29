@@ -1,7 +1,15 @@
 import express from 'express';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { spawn } from 'node:child_process';
+import { randomUUID } from 'node:crypto';
+import { unlink } from 'node:fs/promises';
+import { createReadStream } from 'node:fs';
+import os from 'node:os';
 import { pool, initDb, coachWord, memCacheSize } from './coach.js';
+
+const PIPER_CMD   = process.env.PIPER_CMD   || 'piper';
+const PIPER_MODEL = process.env.PIPER_MODEL || `${os.homedir()}/.local/share/piper/en/en_GB/cori/high/en_GB-cori-high.onnx`;
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT) || 3000;
@@ -28,6 +36,32 @@ app.post('/api/word', async (req, res) => {
   } catch (err) {
     console.error('[api/word]', word, err?.message || err);
     res.status(502).json({ error: 'coach_unavailable', detail: err?.message });
+  }
+});
+
+app.post('/api/speak', async (req, res) => {
+  const text = String(req.body?.text ?? '').trim();
+  if (!text || text.length > 500) return res.status(400).json({ error: 'invalid_text' });
+
+  const outFile = path.join(os.tmpdir(), `piper_${randomUUID()}.wav`);
+  try {
+    await new Promise((resolve, reject) => {
+      const proc = spawn(PIPER_CMD, ['--model', PIPER_MODEL, '--output_file', outFile]);
+      proc.stdin.write(text);
+      proc.stdin.end();
+      proc.on('close', (code) => (code === 0 ? resolve() : reject(new Error(`piper exited ${code}`))));
+      proc.on('error', reject);
+    });
+    res.setHeader('Content-Type', 'audio/wav');
+    res.setHeader('Cache-Control', 'no-cache');
+    const stream = createReadStream(outFile);
+    res.on('finish', () => unlink(outFile).catch(() => {}));
+    res.on('close',  () => unlink(outFile).catch(() => {}));
+    stream.pipe(res);
+  } catch (err) {
+    console.error('[api/speak]', err?.message || err);
+    unlink(outFile).catch(() => {});
+    res.status(502).json({ error: 'tts_unavailable', detail: err.message });
   }
 });
 
